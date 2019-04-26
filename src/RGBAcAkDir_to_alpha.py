@@ -1,5 +1,4 @@
 #%%
-#from tensorflow.examples.tutorials.mnist import input_data  
 import tensorflow as tf
 import os
 from PIL import Image
@@ -49,11 +48,12 @@ crop_num = 99999#99999#1000#9999
 test_stride_size=1
 
 channel_num=8
+read_data = 0
 train=0
 test=1-train
 train_num=600
-img_height=800
-img_width=600
+img_height=800#513#800
+img_width=600#288#600
 batch_num=1
 patch_size=27
 patch_half_size = np.int32((patch_size - 1)/2)
@@ -64,16 +64,16 @@ test_dir=os.path.join(dataset_dir,"test/")
 model_dir="../dataset/model/model_RGBAcAkDir/"
 meta_file=os.path.join(model_dir,'my-model-600.meta')
 TFrecords_name="data_train_RGBAcAkDir.tfrecords"
-
+saveName="_RGBAcAkDir"
 
 #%%
 # 读数据
 def read_data_from_file(data_dir,fname):
-    rgb_dir = os.path.join(train_dir,"rgb/")
-    alpha_c_dir = os.path.join(train_dir,"alpha_c/")
-    alpha_k_dir = os.path.join(train_dir,"alpha_k/")
-    alpha_dir = os.path.join(train_dir,"alpha/")
-    direction_dir = os.path.join(train_dir,"direction/")
+    rgb_dir = os.path.join(data_dir,"rgb/")
+    alpha_c_dir = os.path.join(data_dir,"alpha_c/")
+    alpha_k_dir = os.path.join(data_dir,"alpha_k/")
+    alpha_dir = os.path.join(data_dir,"alpha/")
+    direction_dir = os.path.join(data_dir,"direction/")
     
     fpath_rgb = os.path.join(rgb_dir, fname)  
     fpath_alpha_c = os.path.join(alpha_c_dir, fname)  
@@ -211,7 +211,8 @@ def define_model(x_image):
 
 #%%
 # 读取数据  
-#read_data_to_tfrecords(train_dir)
+if read_data:
+    read_data_to_tfrecords(train_dir)
 
 #%%  
 xs = tf.placeholder(tf.float32, [None, patch_size, patch_size, channel_num],name="xs")   
@@ -250,14 +251,11 @@ with tf.Session() as sess:
         label = tf.decode_raw(features['label_raw'], tf.float64)
         height = tf.cast(features['height'], tf.int64)
         width = tf.cast(features['width'], tf.int64)
-    #    print("height")
-    #    print(height.eval())
-        # restore image to [height, width, 3]
-    #    img = tf.reshape(img, [800, 600, 5])  #reshape为128*128的3通道图片
-        img = tf.reshape(img, [img_height, img_width, channel_num])  #reshape为128*128的3通道图片
+        # restore image to [height, width, channel]
+        img = tf.reshape(img, [img_height, img_width, channel_num])
         img = tf.cast(img, tf.float64) #在流中抛出img张量
-        label = tf.reshape(label, [img_height, img_width,1])  #reshape为128*128的3通道图片
-        label = tf.cast(label, tf.float64) #在流中抛出img张量 #在流中抛出label张量
+        label = tf.reshape(label, [img_height, img_width,1])
+        label = tf.cast(label, tf.float64) #在流中抛出label张量
                 
         # create bathch
         images, labels = tf.train.shuffle_batch(
@@ -265,7 +263,6 @@ with tf.Session() as sess:
                 num_threads=1, min_after_dequeue=10) 
         # capacity是队列的最大容量，num_threads是dequeue后最小的队列大小，num_threads是进行队列操作的线程数。
         
-    #    sess.run(tf.global_variables_initializer())
         sess.run(tf.group(tf.global_variables_initializer(), tf.local_variables_initializer()))
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord)
@@ -285,8 +282,6 @@ with tf.Session() as sess:
                     label_patch_gradient=np.gradient(label_patch.reshape(patch_size,patch_size))
                     n1=np.sum(label_patch==0)
                     n2=np.sum((label_patch_gradient[0]==0)*(label_patch_gradient[1]==0))
-#                    print("n1: ",n1)
-#                    print("n2: ",n2)
                     if n1/(patch_size*patch_size) <1/4:
                         class1=0
                     elif n1/(patch_size*patch_size) <2/4:
@@ -441,8 +436,8 @@ with tf.Session() as sess:
                     h=img_height-patch_half_size-1-test_stride_size
 #                h+=patch_size
                     
-                if h%100==0:
-                    print(h)
+#                if h%100==0:
+#                    print(h)
                 h+=test_stride_size
                
             if len(hw_index):
@@ -503,8 +498,8 @@ with tf.Session() as sess:
             mp.imsave(result_dir+fname[0:5]+'_alpha.png',alpha_img)
             mp.imsave(result_dir+fname[0:5]+'_alpha_c.png',alpha_c_img)
             mp.imsave(result_dir+fname[0:5]+'_alpha_k.png',alpha_k_img)
-            mp.imsave(result_dir+fname[0:5]+'_res.png',res_img)
-            mp.imsave(result_dir+fname[0:5]+'_result.png',result_img)
+            mp.imsave(result_dir+fname[0:5]+saveName+'_res.png',res_img)
+            mp.imsave(result_dir+fname[0:5]+saveName+'_result.png',result_img)
             
             # show results
             plt.figure(figsize=(20, 100))
