@@ -51,8 +51,8 @@ test_stride_size=1
 channels_include = [3,   1,       1,       3,         1     ]
 channel_num = sum(channels_include)
 
-read_data = 1
-train=1
+read_data = 0
+train=0
 test=1-train
 train_num=600
 img_height=800#513#800
@@ -67,6 +67,7 @@ test_dir=os.path.join(dataset_dir,"test/")
 model_dir="../dataset/model/model_RGBAcAkDirTri/"
 meta_file=os.path.join(model_dir,'my-model-600.meta')
 TFrecords_name="data_train_RGBAcAkDirTri.tfrecords"
+result_dir=os.path.join(test_dir,"result_RGBAcAkDirTri_"+str(test_stride_size)+"/")
 saveName="_RGBAcAkDirTri"
 
 #%%
@@ -358,7 +359,6 @@ with tf.Session() as sess:
         
         #prepare the test data
         rgb_dir=os.path.join(test_dir,"rgb/")
-        result_dir=os.path.join(test_dir,"result_RGBAcAkDir_"+str(test_stride_size)+"/")
         i=0
         for fname in os.listdir(rgb_dir): 
             i+=1
