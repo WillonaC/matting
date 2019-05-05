@@ -10,7 +10,7 @@ def generate_trimap(alpha):
     trimap = fg * 255 + (unknown - fg) * 128
     return trimap.astype(np.uint8)
 
-for imgNum in range(1,301,1):
-	alpha_img=cv.imread('../dataset/test/alpha/%05d.png'%imgNum)
+for imgNum in range(1,631,1):
+	alpha_img=cv.imread('../dataset/train2/alpha/%05d.png'%imgNum)
 	trimap_img=generate_trimap(alpha_img)
-	cv.imwrite('../dataset/test/trimap/%05d.png'%imgNum,trimap_img)
+	cv.imwrite('../dataset/train2/trimap/%05d.png'%imgNum,trimap_img)

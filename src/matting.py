@@ -52,7 +52,7 @@ channels_include = [3,   1,       1,       3,         1     ]
 channel_num = sum(channels_include)
 
 read_data = 0
-train=0
+train=1
 test=1-train
 train_num=600
 img_height=800#513#800
@@ -64,11 +64,11 @@ each_class_num = 4
 dataset_dir="../dataset/"
 train_dir=os.path.join(dataset_dir,"train/")
 test_dir=os.path.join(dataset_dir,"test/")
-model_dir="../dataset/model/model_RGBAcAkDirTri/"
+model_dir="../dataset/model/model_RGBAcAkDirTri_unk/"
 meta_file=os.path.join(model_dir,'my-model-600.meta')
 TFrecords_name="data_train_RGBAcAkDirTri.tfrecords"
-result_dir=os.path.join(test_dir,"result_RGBAcAkDirTri_"+str(test_stride_size)+"/")
-saveName="_RGBAcAkDirTri"
+result_dir=os.path.join(test_dir,"result_RGBAcAkDirTri_unk_"+str(test_stride_size)+"/")
+saveName="_RGBAcAkDirTri_unk"
 
 #%%
 # 读数据
@@ -260,49 +260,62 @@ with tf.Session() as sess:
             
             # random crop image to patch
             seeds=[]
+            input_images=[]
+            label_images=[]
             for i in range(each_class_num*each_class_num):
                 seeds.append([])
             for batch_crop_index in range(batch_num):
                 for crop_index in range(crop_num):
                     seed_h = np.random.randint(patch_half_size, img_height-patch_half_size-1)
                     seed_w = np.random.randint(patch_half_size, img_width-patch_half_size-1)
+                    input_patch=batch_images[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
                     label_patch=batch_labels[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
                     label_patch_gradient=np.gradient(label_patch.reshape(patch_size,patch_size))
-                    n1=np.sum(label_patch==0)
-                    n2=np.sum((label_patch_gradient[0]==0)*(label_patch_gradient[1]==0))
-                    if n1/(patch_size*patch_size) <1/4:
-                        class1=0
-                    elif n1/(patch_size*patch_size) <2/4:
-                        class1=1
-                    elif n1/(patch_size*patch_size) <3/4:
-                        class1=2
-                    else:
-                        class1=3
-                    if n2/(patch_size*patch_size) <1/4:
-                        class2=0
-                    elif n2/(patch_size*patch_size) <2/4:
-                        class2=1
-                    elif n2/(patch_size*patch_size) <3/4:
-                        class2=2
-                    else:
-                        class2=3
-                    class_num = class1*each_class_num+class2
-                    seeds[class_num].append([seed_h,seed_w])
                     
-            input_images=[]
-            label_images=[]
-            for i in range(len(seeds)):
-                if len(seeds[i])==0:
-                    continue
-                else:
-                    for j in range(min(len(seeds[i]),class_select_num)):
-                        seed_h=seeds[i][j][0]
-                        seed_w=seeds[i][j][1]
-                        input_patch=batch_images[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
-                        label_patch=batch_labels[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
+                    # patch classification(2 approaches)
+                    
+                    # approach 1 #####################################################################################################################################
+                    if (np.sum(label_patch==0)+np.sum(label_patch==1)) / (patch_size*patch_size) < 0.01:
                         input_images.append(input_patch)
                         label_images.append(label_patch)
+                    # approach 1 #####################################################################################################################################
+                        
+                    # approach 2 #####################################################################################################################################
+#                    n1=np.sum(label_patch==0)
+#                    n2=np.sum((label_patch_gradient[0]==0)*(label_patch_gradient[1]==0))
+#                    if n1/(patch_size*patch_size) <1/4:
+#                        class1=0
+#                    elif n1/(patch_size*patch_size) <2/4:
+#                        class1=1
+#                    elif n1/(patch_size*patch_size) <3/4:
+#                        class1=2
+#                    else:
+#                        class1=3
+#                    if n2/(patch_size*patch_size) <1/4:
+#                        class2=0
+#                    elif n2/(patch_size*patch_size) <2/4:
+#                        class2=1
+#                    elif n2/(patch_size*patch_size) <3/4:
+#                        class2=2
+#                    else:
+#                        class2=3
+#                    class_num = class1*each_class_num+class2
+#                    seeds[class_num].append([seed_h,seed_w])
+#            for i in range(len(seeds)):
+#                if len(seeds[i])==0:
+#                    continue
+#                else:
+#                    for j in range(min(len(seeds[i]),class_select_num)):
+#                        seed_h=seeds[i][j][0]
+#                        seed_w=seeds[i][j][1]
+#                        input_patch=batch_images[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
+#                        label_patch=batch_labels[batch_crop_index,seed_h-patch_half_size:seed_h+patch_half_size+1,seed_w-patch_half_size:seed_w+patch_half_size+1,:]
+#                        input_images.append(input_patch)
+#                        label_images.append(label_patch)
+                # approach 2 #####################################################################################################################################
             
+            if len(input_images)==0:
+                continue
             sele_index=np.array(range(len(input_images)))
             random.shuffle(sele_index)
             for patch_batch_index in range(max(np.int32(len(input_images)/patch_batch_num),1)):
